@@ -47,16 +47,18 @@ module MetaWeather
         end
       end
 
-      # TODO: You cannot pass arguments with - sign prepended
       class LattLong < Dry::CLI::Command
-        desc "Search for weather by latitude and longitude"
+        desc "Search for weather by latitude and longitude, you need to prepend arguments with -- when using negative latt or long"
+
+        argument :latt, required: true
+        argument :long, required: true
 
         example [
-          "-- 35.666431 105.972572"
+          "-- -35.666431 105.972572"
         ]
 
-        def call(args:)
-          response = Api::Location.new.lattlong(latt: args[0], long: args[1])
+        def call(latt:, long:)
+          response = Api::Location.new.lattlong(latt: latt, long: long)
           puts response.body
         end
       end
