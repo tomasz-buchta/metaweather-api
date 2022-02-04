@@ -1,0 +1,71 @@
+#!/usr/bin/env ruby
+
+require 'bundler/inline'
+
+gemfile do
+  source 'https://rubygems.org'
+  gem "httparty"
+  gem "dry-cli"
+end
+
+module MetaWeather
+  module Api
+    class Location
+      include HTTParty
+      base_uri 'https://www.metaweather.com/api/location/search'
+
+      def query(location)
+        self.class.get('/', query: { "query" => location })
+      end
+
+      def lattlong(latt: , long:)
+        self.class.get('/', query: { "lattlong" => "#{latt},#{long}" })
+      end
+    end
+  end
+
+  module CLI
+    module Commands
+      extend Dry::CLI::Registry
+
+      class Version < Dry::CLI::Command
+        desc "Print version"
+
+        def call(*)
+          puts "1.0.0"
+        end
+      end
+
+      class Search < Dry::CLI::Command
+        desc "Search for weather by location name"
+
+        argument :location, required: true, desc: "Location search string"
+
+        def call(location:)
+          response = Api::Location.new.query(location)
+          puts response.body
+        end
+      end
+
+      # TODO: You cannot pass arguments with - sign prepended
+      class LattLong < Dry::CLI::Command
+        desc "Search for weather by latitude and longitude"
+
+        example [
+          "-- 35.666431 105.972572"
+        ]
+
+        def call(args:)
+          response = Api::Location.new.lattlong(latt: args[0], long: args[1])
+          puts response.body
+        end
+      end
+
+      register "version", Version, aliases: ["v", "-v", "--version"]
+      register "search", Search, aliases: ["search", "s"]
+      register "lattlong", LattLong, aliases: ["lattlong", "ll"]
+    end
+  end
+end
+
+Dry::CLI.new(MetaWeather::CLI::Commands).call
