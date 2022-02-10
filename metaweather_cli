@@ -12,14 +12,18 @@ module MetaWeather
   module Api
     class Location
       include HTTParty
-      base_uri 'https://www.metaweather.com/api/location/search'
+      base_uri 'https://www.metaweather.com/api/location'
 
-      def query(location)
-        self.class.get('/', query: { "query" => location })
+      def forecast(woeid)
+        self.class.get("/#{woeid}")
+      end
+
+      def query(query)
+        self.class.get('/search/', query: { "query" => query })
       end
 
       def lattlong(latt: , long:)
-        self.class.get('/', query: { "lattlong" => "#{latt},#{long}" })
+        self.class.get('/search/', query: { "lattlong" => "#{latt},#{long}" })
       end
     end
   end
@@ -42,8 +46,23 @@ module MetaWeather
         argument :location, required: true, desc: "Location search string"
 
         def call(location:)
-          response = Api::Location.new.query(location)
-          puts response.body
+          api = Api::Location.new
+          response = api.query(location)
+          if response.any?
+            # First result is the most likely hit
+            woeid = response.first["woeid"]
+            forecast_response = api.forecast(woeid)
+            puts "Weather for #{forecast_response['parent']['title']}"
+            forecast_response["consolidated_weather"].each do |weather_data|
+              puts weather_for_day(weather_data)
+            end
+          else
+            puts "Location not found"
+          end
+        end
+
+        def weather_for_day(data)
+          "#{data['applicable_date']} - #{data['weather_state_name']}"
         end
       end
 
