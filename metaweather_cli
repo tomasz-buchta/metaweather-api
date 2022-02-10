@@ -25,6 +25,8 @@ module MetaWeather
   end
 
   class DayForecast
+    RAINY_ABBREVIATIONS = %w(sn sl h t hr lr s)
+
     def initialize(entry)
       @entry = entry
     end
@@ -35,6 +37,10 @@ module MetaWeather
 
     def weather_state
       entry['weather_state_name']
+    end
+
+    def rainy?
+      RAINY_ABBREVIATIONS.include?(entry['weather_state_abbr'])
     end
 
     private
@@ -102,8 +108,12 @@ module MetaWeather
           end
         end
 
+        def yesno(boolean)
+          boolean ? 'yes' : 'no'
+        end
+
         def format_day_forecast(forecast)
-          "#{forecast.date} - #{forecast.weather_state}"
+          "#{forecast.date} - #{forecast.weather_state} - rainy?: #{yesno(forecast.rainy?)}"
         end
       end
 
