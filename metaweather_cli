@@ -44,8 +44,9 @@ module MetaWeather
         desc "Search for weather by location name"
 
         argument :location, required: true, desc: "Location search string"
+        option :for_tomorrow, type: :boolean, default: false, desc: "Print weather just for tomorrow"
 
-        def call(location:)
+        def call(location:, **options)
           api = Api::Location.new
           response = api.query(location)
           if response.any?
@@ -53,15 +54,22 @@ module MetaWeather
             woeid = response.first["woeid"]
             forecast_response = api.forecast(woeid)
             puts "Weather for #{forecast_response['parent']['title']}"
-            forecast_response["consolidated_weather"].each do |weather_data|
-              puts weather_for_day(weather_data)
+            weather_data_for_days =
+              if options.fetch(:for_tomorrow)
+                forecast_response["consolidated_weather"]
+                  .select{|entry| entry["applicable_date"] == (Date.today + 1).to_s}
+              else
+                forecast_response["consolidated_weather"]
+              end
+            weather_data_for_days.each do |weather_data|
+              puts format_weather(weather_data)
             end
           else
             puts "Location not found"
           end
         end
 
-        def weather_for_day(data)
+        def format_weather(data)
           "#{data['applicable_date']} - #{data['weather_state_name']}"
         end
       end
