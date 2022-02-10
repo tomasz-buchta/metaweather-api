@@ -21,10 +21,6 @@ module MetaWeather
       def query(query)
         self.class.get('/search/', query: { "query" => query })
       end
-
-      def lattlong(latt: , long:)
-        self.class.get('/search/', query: { "lattlong" => "#{latt},#{long}" })
-      end
     end
   end
 
@@ -53,19 +49,25 @@ module MetaWeather
             # First result is the most likely hit
             woeid = response.first["woeid"]
             forecast_response = api.forecast(woeid)
-            puts "Weather for #{forecast_response['parent']['title']}"
-            weather_data_for_days =
-              if options.fetch(:for_tomorrow)
-                forecast_response["consolidated_weather"]
-                  .select{|entry| entry["applicable_date"] == (Date.today + 1).to_s}
-              else
-                forecast_response["consolidated_weather"]
-              end
-            weather_data_for_days.each do |weather_data|
+            puts "Weather for #{location_name(forecast_response)}"
+            weather_data(forecast_response, options).each do |weather_data|
               puts format_weather(weather_data)
             end
           else
             puts "Location not found"
+          end
+        end
+
+        def location_name(response)
+          response['parent']['title']
+        end
+
+        def weather_data(response, options = {})
+          if options.fetch(:for_tomorrow)
+            response["consolidated_weather"]
+              .select{|entry| entry["applicable_date"] == (Date.today + 1).to_s}
+          else
+            response["consolidated_weather"]
           end
         end
 
@@ -74,25 +76,8 @@ module MetaWeather
         end
       end
 
-      class LattLong < Dry::CLI::Command
-        desc "Search for weather by latitude and longitude, you need to prepend arguments with -- when using negative latt or long"
-
-        argument :latt, required: true
-        argument :long, required: true
-
-        example [
-          "-- -35.666431 105.972572"
-        ]
-
-        def call(latt:, long:)
-          response = Api::Location.new.lattlong(latt: latt, long: long)
-          puts response.body
-        end
-      end
-
       register "version", Version, aliases: ["v", "-v", "--version"]
       register "search", Search, aliases: ["search", "s"]
-      register "lattlong", LattLong, aliases: ["lattlong", "ll"]
     end
   end
 end
